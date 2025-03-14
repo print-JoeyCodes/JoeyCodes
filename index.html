@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" type="image/png" href="SimpleSpritesheet1.0.png">
+        <title>Pixel Acres</title>
+        <style>  
+            body {
+                background-color: #D3B683;
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="myCanvas" width="1500" height="600"></canvas>
+        <script>
+            // Sprite Sheet Setup
+            // Load the sprite sheet
+            const spriteSheet = new Image();
+            spriteSheet.src = 'SimpleSpritesheet1.0.png'; // Path to your sprite sheet
+
+            // Variables
+            let totalGrain = 5;
+            let tool = 'seeds'; // Current tool
+            let timerLength = 0;
+
+            // Canvas setup
+            const canvas = document.getElementById('myCanvas');
+            const ctx = canvas.getContext('2d');
+            document.body.style.overflow = 'hidden';
+
+            // Farmland grid setup
+            const farmlands = [];
+            const rows = 6;
+            const columns = 8;
+            const spacing = 12;
+            const farmlandWidth = 70;
+            const farmlandHeight = 70;
+
+            // Initialize farmlands
+            let cellNumber = 0;
+            for (let row = 0; row < rows; row++) {
+                cellNumber + 8;
+                for (let col = 0; col < columns; col++) {
+                    cellNumber ++;
+                    farmlands.push({
+                        x: (col * (farmlandWidth + spacing)) + 403,
+                        y: (row * (farmlandHeight + spacing)) + 100,
+                        w: farmlandWidth,
+                        h: farmlandHeight,
+                        state: 'dry soil',
+                        timer: null,
+                        farmlandNumber: cellNumber,
+                        fullyWatered: false,
+                    });
+                    
+                }
+            };
+
+            // Draw farmlands
+            function drawFarmlands() {
+                farmlands.forEach(farmland => {
+                    let spriteX, spriteY;
+                    switch (farmland.state) {
+                        case 'dry soil':
+                            spriteX = 70; // First column in sprite sheet
+                            spriteY = 70; // First row in sprite sheet
+                            break;
+                        case 'seeds':
+                            spriteX = 0; // Second column
+                            spriteY = 70;
+                            break;
+                        case 'grain':
+                            spriteX = 70; // Third column
+                            spriteY = 0;
+                            break;
+                        case 'wet soil':
+                            spriteX = 0;
+                            spriteY = 0;
+                    }
+                    ctx.drawImage(
+                        spriteSheet,
+                        spriteX, spriteY, farmlandWidth, farmlandHeight, // Source rectangle
+                        farmland.x, farmland.y, farmland.w, farmland.h // Destination rectangle
+                    );
+                });
+            }
+
+            // Draw menu and buttons
+            function drawMenu(grainAmount) {
+                ctx.fillStyle = 'black';
+                ctx.fillRect(50, 70, 200, 500);
+                ctx.fillStyle = '#D3D3D3';
+                ctx.fillRect(55, 75, 190, 490);
+                drawButton(70, 90, 160, 50, 'Seeds', tool === 'seeds');
+                drawButton(70, 160, 160, 50, 'Scythe', tool === 'scythe');
+                drawButton(70, 230, 160, 50, 'Water bucket', tool === 'water bucket');
+                ctx.fillStyle = '#D3D3D3';
+                ctx.fillRect(70,500,160,40);
+                ctx.fillStyle = 'black';
+                ctx.font = '26px Arial';
+                grainAmount = Math.round(grainAmount);
+                ctx.fillText(grainAmount + ' Grain', 82, 528);
+                ctx.fillStyle = '#C1C1C1';
+                ctx.fillRect(70,475,160,10);
+
+            };
+
+            // Draw a button
+            function drawButton(x, y, width, height, label, selected) {
+                ctx.fillStyle = selected ? 'black' : 'white';
+                ctx.fillRect(x, y, width, height);
+                ctx.fillStyle = selected ? 'white' : 'black';
+                ctx.font = '24px Arial';
+                ctx.fillText(label, x + 12, y + 33);
+            };
+
+            // Handle tool selection
+            function handleToolSelection(mouseX, mouseY) {
+                if (mouseX >= 70 && mouseX <= 230 && mouseY >= 90 && mouseY <= 140) {
+                    tool = 'seeds';
+                    drawMenu(totalGrain);
+                } 
+                else if (mouseX >= 70 && mouseX <= 230 && mouseY >= 160 && mouseY <= 210) {
+                    tool = 'scythe';
+                    drawMenu(totalGrain);
+                }
+                else if(mouseX >= 70 && mouseX <= 230 && mouseY >= 230 && mouseY <= 280) {
+                    tool = 'water bucket'
+                    drawMenu(totalGrain);
+                }
+                
+            };
+
+            // Handle farmland clicks
+            function handleFarmlandClick(mouseX, mouseY) {
+                 farmlands.forEach(farmland => {
+                    if (mouseX >= farmland.x && mouseX <= farmland.x + farmland.w &&
+                    mouseY >= farmland.y && mouseY <= farmland.y + farmland.h) {
+                        if (farmland.state === 'grain' && tool === 'scythe') {
+                            grainRandomizer();
+                            if (farmland.timer) {
+                            clearTimeout(farmland.timer);
+                            farmland.timer = null;
+                            }
+                            if(farmland.fullyWatered === true){
+                                farmland.state = 'wet soil';
+                                farmland.fullyWatered = false;
+                            }
+                            else{
+                                farmland.state = 'dry soil';
+                            }
+                        } 
+                        else if (tool === 'seeds' && totalGrain > 0 && (farmland.state === 'dry soil' || farmland.state === 'wet soil')) {
+                            totalGrain = totalGrain - .5;
+                            drawMenu(totalGrain)
+                            // Check the soil's state before updating it to 'seeds'
+                            if (farmland.state === 'wet soil') {
+                                timerLength = (Math.floor(Math.random() * 26) + 10) * 1000; // Shorter timer for wet soil
+                            } 
+                            else {
+                                timerLength = (Math.floor(Math.random() * 26) + 25) * 1000; // Longer timer for dry soil
+                            }
+
+                            // Update the state to 'seeds' after determining the timer length
+                            farmland.state = 'seeds';
+                            farmland.timer = setTimeout(() => {
+                                farmland.state = 'grain';
+                                farmland.timer = null;
+                                drawFarmlands();
+                            }, timerLength);
+                        }
+                        else if (farmland.state === 'dry soil' && tool === 'water bucket') {
+                            waterFarmlands(farmland.farmlandNumber); // Pass the farmland number
+                         }
+                        drawFarmlands();
+                    }
+                });
+            };
+
+
+            // Event listener for canvas clicks
+            canvas.addEventListener('click', (event) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+                handleToolSelection(mouseX, mouseY);
+                handleFarmlandClick(mouseX, mouseY);
+            });
+
+            function grainRandomizer(){
+                const randomValue = Math.random();
+                if (randomValue < .15) {
+                    totalGrain = totalGrain + 2;
+                    drawMenu(totalGrain)
+                    // 2 grain
+                }
+                else {
+                    totalGrain = totalGrain + 1;
+                    drawMenu(totalGrain)
+                    // 1 grain
+                }
+            };
+
+            // Funtion to determine farmlands to water
+            function waterFarmlands(wateredFarmland) {
+                const targetCell = wateredFarmland;
+                const topCell = targetCell - columns;
+                const bottomCell = targetCell + columns;
+                const leftCell = targetCell - 1;
+                const rightCell = targetCell + 1;
+                const cellsToUpdate = [targetCell, topCell, bottomCell, leftCell, rightCell];
+
+                // Modify the state for the targeted cells
+                cellsToUpdate.forEach((cellNumber) => {
+                    const isSameRow = Math.floor((cellNumber - 1) / columns) === Math.floor((targetCell - 1) / columns);
+                    if (cellNumber === targetCell || isSameRow || cellNumber === topCell || cellNumber === bottomCell) {
+                    const farmland = farmlands.find(f => f.farmlandNumber === cellNumber);
+                        if (farmland) {
+                            if (farmland.state === 'dry soil'){
+                                farmland.state = "wet soil";
+                            }
+                            if (cellNumber === targetCell){
+                                farmland.fullyWatered = true;
+                            }
+                        }
+                    }
+                });
+            };
+            // Wait for the sprite sheet to load before drawing
+            spriteSheet.onload = () => {
+                drawMenu(totalGrain);
+                drawFarmlands();
+            };
+        </script>
+    </body>
+</html>
