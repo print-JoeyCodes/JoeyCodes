@@ -27,10 +27,30 @@ const ctx = canvas.getContext('2d');
 
 // Responsive scaling
 let scale = 1;
+let baseWidth = 1500;
+let baseHeight = 600;
+
 function updateCanvasSize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    scale = Math.min(canvas.width / 1500, canvas.height / 600);
+    canvas.width = window.innerWidth * window.devicePixelRatio;
+    canvas.height = window.innerHeight * window.devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    
+    // Calculate scale based on both width and height constraints
+    scale = Math.min(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
+    
+    // Update farmland positions and sizes
+    farmlands.forEach(farmland => {
+        farmland.w = baseFarmlandWidth * scale;
+        farmland.h = baseFarmlandHeight * scale;
+        // Recalculate positions to maintain center alignment
+        let col = Math.floor((farmland.farmlandNumber - 1) % columns);
+        let row = Math.floor((farmland.farmlandNumber - 1) / columns);
+        farmland.x = (col * (farmland.w + spacing * scale)) + (403 * scale);
+        farmland.y = (row * (farmland.h + spacing * scale)) + (100 * scale);
+    });
+    
     drawBackground();
     drawMenu(totalGrain);
     drawFarmlands();
@@ -353,10 +373,16 @@ canvas.addEventListener('touchstart', (event) => {
     const touch = event.touches[0];
     const mouseX = (touch.clientX - rect.left) / scale;
     const mouseY = (touch.clientY - rect.top) / scale;
-    
-    handleToolSelection(mouseX, mouseY);
     handleFarmlandClick(mouseX, mouseY);
-});
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (event) => {
+    event.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const touch = event.touches[0];
+    lastMouseX = (touch.clientX - rect.left) / scale;
+    lastMouseY = (touch.clientY - rect.top) / scale;
+}, { passive: false });
 
 canvas.addEventListener('click', (event) => {
     const rect = canvas.getBoundingClientRect();
@@ -364,6 +390,12 @@ canvas.addEventListener('click', (event) => {
     const mouseY = (event.clientY - rect.top) / scale;
     handleToolSelection(mouseX, mouseY);
     handleFarmlandClick(mouseX, mouseY);
+});
+
+canvas.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    lastMouseX = (event.clientX - rect.left) / scale;
+    lastMouseY = (event.clientY - rect.top) / scale;
 });
 
 window.addEventListener('keydown', (event) => {
@@ -386,12 +418,6 @@ window.addEventListener('keyup', (event) => {
 let spacePressed = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
-
-canvas.addEventListener('mousemove', (event) => {
-    const rect = canvas.getBoundingClientRect();
-    lastMouseX = (event.clientX - rect.left) / scale;
-    lastMouseY = (event.clientY - rect.top) / scale;
-});
 
 // Funtion to determine farmlands to water
 function waterFarmlands(wateredFarmland) {
@@ -448,8 +474,11 @@ function checkLoadedSpriteSheets(){
 
 function initBackground() {
     // Initial canvas setup
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth * window.devicePixelRatio;
+    canvas.height = window.innerHeight * window.devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
     // Generate initial tile grid
     maxCols = Math.ceil(canvas.width / TILE_SIZE);
