@@ -14,7 +14,6 @@ let tileGrid = [];
 let maxCols = 0;
 let maxRows = 0;
 
-
 // Variables
 let totalGrain = 5;
 let tool = 'seeds';
@@ -30,7 +29,31 @@ let scale = 1;
 function updateCanvasSize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    scale = Math.min(canvas.width / 1500, canvas.height / 600);
+    
+    // Adjust scale based on screen size
+    const baseWidth = 1500;
+    const baseHeight = 600;
+    const widthScale = canvas.width / baseWidth;
+    const heightScale = canvas.height / baseHeight;
+    scale = Math.min(widthScale, heightScale);
+    
+    // Ensure minimum scale for mobile devices
+    if (window.innerWidth <= 768) {
+        scale = Math.max(scale, 0.4); // Minimum scale for mobile
+    }
+    
+    // Update spacing and farmland dimensions
+    const spacing = baseSpacing * scale;
+    farmlands.forEach(farmland => {
+        farmland.w = baseFarmlandWidth * scale;
+        farmland.h = baseFarmlandHeight * scale;
+        // Recalculate positions with the new scale
+        const col = Math.floor((farmland.farmlandNumber - 1) % columns);
+        const row = Math.floor((farmland.farmlandNumber - 1) / columns);
+        farmland.x = (col * (baseFarmlandWidth + baseSpacing) + 403) * scale;
+        farmland.y = (row * (baseFarmlandHeight + baseSpacing) + 100) * scale;
+    });
+    
     drawBackground();
     drawMenu(totalGrain);
     drawFarmlands();
@@ -78,8 +101,6 @@ for (let row = 0; row < rows; row++) {
 
 // Draw farmlands
 function drawFarmlands() {
-    ctx.save();
-    ctx.scale(scale, scale);
     farmlands.forEach(farmland => {
         let spriteX, spriteY, seedling, grownGrain;
         if(farmland.state === 'seeds'){
@@ -149,13 +170,10 @@ function drawFarmlands() {
             }
         }
     });
-    ctx.restore();
 }
 
 // Draw menu and buttons
-function drawMenu(grainAmount) {
-    ctx.save();
-    ctx.scale(scale, scale);
+function drawMenu() {
     ctx.fillStyle = '#90625d';
     ctx.fillRect(50, 70, 200, 500);
     ctx.fillStyle = '#c49a6c';
@@ -186,7 +204,6 @@ function drawMenu(grainAmount) {
     ctx.fillText(displayGrain + ' Grain', 82, 528);
     ctx.fillStyle = '#6b4b5b';
     ctx.fillRect(70,475,160,10);
-    ctx.restore();
 };
 
 // Handle tool selection
@@ -348,7 +365,6 @@ function doubleCropRandomizer(farmland){
 };
 
 canvas.addEventListener('touchstart', (event) => {
-    event.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const touch = event.touches[0];
     const mouseX = (touch.clientX - rect.left) / scale;
@@ -374,6 +390,11 @@ window.addEventListener('keydown', (event) => {
     else if(event.code === 'Space' && spacePressed === false){
         handleFarmlandClick(lastMouseX, lastMouseY);
         spacePressed = true;
+    }
+    // Add debug mode toggle with Ctrl/Cmd + D
+    else if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+        event.preventDefault();
+        toggleDebugMode();
     }
 });
 
@@ -419,7 +440,32 @@ function waterFarmlands(wateredFarmland) {
         }
     });
 };
- 
+
+// Debug controls
+let isDebugMode = false;
+
+function toggleDebugMode() {
+    const debugControls = document.getElementById('debugControls');
+    isDebugMode = !isDebugMode;
+    debugControls.style.display = isDebugMode ? 'block' : 'none';
+}
+
+function applyDebugSize() {
+    const width = document.getElementById('screenWidth').value;
+    const height = document.getElementById('screenHeight').value;
+    if (width && height) {
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        updateCanvasSize();
+    }
+}
+
+function resetSize() {
+    canvas.style.width = '100vw';
+    canvas.style.height = '100vh';
+    updateCanvasSize();
+}
+
 window.addEventListener('beforeunload', (event) => {
     totalGrain = totalGrain - 5;
     if(totalGrain > 0.5){
@@ -430,7 +476,6 @@ window.addEventListener('beforeunload', (event) => {
         return;
     };
 });
-
 
 // Wait for the sprite sheet to load before drawing
 farmSpriteSheet.onload = checkLoadedSpriteSheets;
