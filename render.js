@@ -1,9 +1,9 @@
 export default class Canvas {
-    constructor(width, height){
+    constructor(){
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.width = this.canvas.width = width;
-        this.height = this.canvas.heigh = height;
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
     }
 
     drawRect(fillStyle,x,y,width,height){
